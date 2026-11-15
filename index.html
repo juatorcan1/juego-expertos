@@ -91,10 +91,12 @@ function tip(i){const d=D[i];return`<div class="tip"><span class="f ${d[3]==="�
 function cromo(e,cls=""){return`<div class="cromo ${e.rar==="Legendario"?"leg":""} ${cls}" style="background:${COL[e.c]}"><span class="r">${e.rar}</span><div style="font-size:26px">${ICO[e.c]}</div><div class="n">${esc(e.nombre)}</div><div class="p">${esc(e.prof)}</div><div class="k">${e.ids.filter(i=>S.vistos[i]).length}/${e.ids.length} consejos</div></div>`}
 function go(h){location.hash=h}
 function ruta(){const p=location.hash.slice(1).split("~");window.scrollTo(0,0);const a=document.getElementById("app");
- ({sobre:vSobre,album:vAlbum,ex:vEx,ruleta:vRuleta,memory:vMemory,creer:vCreer}[p[0]]||vInicio)(a,p[1])}
+ ({sobre:vSobre,album:vAlbum,ex:vEx,ruleta:vRuleta,memory:vMemory,creer:vCreer,coronas:vCoronas,duelo:vDuelo}[p[0]]||vInicio)(a,p[1],p.slice(1))}
 function vInicio(a){const n=Object.keys(S.album).length;
  a.innerHTML=`<div class="hero"><div class="sobre" onclick="go('#sobre')">${sobres()?"ABRIR":"0"}</div><div style="flex:1;min-width:220px"><h1>Colecciona a los ${EXL.length} expertos</h1><p>Cada sobre trae un experto y 3 de sus consejos. Tienes 3 sobres gratis al día y ganas sobres extra con los minijuegos.</p><button class="btn" style="background:#fff;color:#2f5d50" ${sobres()?"":"disabled"} onclick="go('#sobre')">✉️ Abrir sobre (${sobres()})</button></div></div>
  <div class="modos">
+ <div class="modo" onclick="go('#coronas')" style="border-color:var(--gold)"><div class="e">👑</div><h3>Ruleta de las 6 coronas</h3><p>Gira, responde y consigue la corona de cada ciencia. Mejor partida: ${S.mejorCoronas||0} pts.</p></div>
+ <div class="modo" onclick="go('#duelo')" style="border-color:var(--c3)"><div class="e">⚔️</div><h3>Reta a un amigo</h3><p>10 preguntas iguales para los dos. Le mandas el enlace y gana quien saque más puntos.</p></div>
  <div class="modo" onclick="go('#album')"><div class="e">📒</div><h3>Mi álbum</h3><p>${n} de ${EXL.length} cromos · ${Object.keys(S.vistos).length} consejos leídos</p></div>
  <div class="modo" onclick="go('#ruleta')"><div class="e">🎡</div><h3>Ruleta de la vida</h3><p>Gira y te toca una situación con los consejos de los expertos.</p></div>
  <div class="modo" onclick="go('#memory')"><div class="e">🧩</div><h3>Memory</h3><p>Empareja cada experto con su consejo. Si ganas, sobre extra.</p></div>
@@ -140,6 +142,58 @@ function vCreer(a,cs){const fil=cs===undefined||cs===""?null:+cs;const pool=sh(D
   let acabado=false;function fin(){if(acabado)return;acabado=true;clearInterval(iv);document.removeEventListener("keydown",key);const rec=pts>S.record;if(rec)S.record=pts;S.xp+=Math.round(pts/5);let extra="";if(pts>=100){S.sobresExtra++;extra=" · ¡sobre extra ✉️!"}racha();guarda();if(rec||pts>=100)confeti();
    a.innerHTML=`<div class="arc"><div style="font:700 52px Fredoka;color:var(--gold)">${pts}</div><p>${rec?"¡Nuevo récord!":"Récord: "+S.record}${extra}</p><div style="display:flex;gap:10px;justify-content:center"><button class="btn" onclick="ruta()">Jugar otra vez</button><button class="btn sec" onclick="go('')">Inicio</button></div></div>${fallos.length?`<h3>Los que fallaste (aquí está la respuesta):</h3>${fallos.map(tip).join("")}`:""}`}
   pinta()}}
+
+// ---------- preguntas con respuesta objetiva (sin juzgar si es verdad) ----------
+function rng(seed){let a=seed>>>0;return()=>{a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+function shR(a,r){a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(r()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
+const POR_C=C.map((_,c)=>D.map((d,i)=>i).filter(i=>D[i][0]===c));
+function preguntaDe(c,r){r=r||Math.random;for(let n=0;n<20;n++){const i=POR_C[c][Math.floor(r()*POR_C[c].length)],d=D[i];
+  if(r()<.6){const otros=shR([...new Set(POR_C[c].map(j=>D[j][4]).filter(x=>x!==d[4]&&x.split("(")[0].trim()!==d[4].split("(")[0].trim()))],r).slice(0,3);
+   if(otros.length===3)return{i,txt:"¿Quién lo dijo?",cuerpo:esc(d[5]),ops:shR([d[4],...otros],r),ok:d[4]}}
+  const otros=shR([...new Set(POR_C[c].map(j=>D[j][2]).filter(x=>x!==d[2]))],r).slice(0,3);
+  if(otros.length===3)return{i,txt:"¿De qué tema habla?",cuerpo:`<b>${esc(d[4])}</b>: ${esc(d[5])}`,ops:shR([d[2],...otros],r),ok:d[2]}}}
+function pintaPregunta(cont,q,c,onFin,segs){let t=segs||20,hecho=false;const fin0=Date.now()+t*1000;
+ cont.innerHTML=`<div class="arc" style="text-align:left"><div class="hud"><span style="color:${COL[c]}">${ICO[c]} ${esc(C[c][0])}</span><span>⏱ <b id="pt">${t}</b></span></div><div class="timer"><i id="pb" style="width:100%"></i></div><h3 style="margin:8px 0">${q.txt}</h3><div style="font-size:17px;margin:6px 0 12px">${q.cuerpo}</div><div>${q.ops.map((o,j)=>`<button class="chip opc" data-j="${j}" style="display:block;width:100%;text-align:left;margin:6px 0;border-radius:12px;padding:11px 14px">${esc(o)}</button>`).join("")}</div><div id="pfb"></div></div>`;
+ const iv=setInterval(()=>{const r=Math.max(0,(fin0-Date.now())/1000);const a=document.getElementById("pt");if(!a){clearInterval(iv);return}a.textContent=Math.ceil(r);document.getElementById("pb").style.width=r/t*100+"%";if(r<=0)resp(-1)},200);
+ function resp(j){if(hecho)return;hecho=true;clearInterval(iv);const bien=j>=0&&q.ops[j]===q.ok;S.vistos[q.i]=1;
+  cont.querySelectorAll(".opc").forEach(b=>{b.disabled=true;if(q.ops[+b.dataset.j]===q.ok){b.style.background="var(--okbg)";b.style.borderColor="var(--ok)"}else if(+b.dataset.j===j){b.style.background="var(--badbg)";b.style.borderColor="var(--bad)"}});
+  document.getElementById("pfb").innerHTML=`<p class="fred" style="font-size:18px;margin:8px 0">${bien?"✅ ¡Correcto!":j<0?"⏰ Se acabó el tiempo":"❌ No era esa"}</p>${tip(q.i)}<button class="btn" id="psig" style="margin-top:8px">Seguir</button>`;
+  document.getElementById("psig").onclick=()=>onFin(bien,Math.ceil(Math.max(0,(fin0-Date.now())/1000)))}
+ cont.querySelectorAll(".opc").forEach(b=>b.onclick=()=>resp(+b.dataset.j))}
+// ---------- ruleta de las 6 coronas ----------
+function vCoronas(a){let P={coronas:[],racha:0,vidas:3,pts:0};const n=7,sec=360/n;let giro=0;
+ const seg=i=>i<6?COL[i]:"#c2185b";const grad=[...Array(n)].map((_,i)=>`${seg(i)} ${i*sec}deg ${(i+1)*sec}deg`).join(",");
+ function tablero(){a.innerHTML=`<button class="back" onclick="go('')">← Inicio</button><h2 style="text-align:center;margin:0">👑 Ruleta de las 6 coronas</h2>
+  <div style="display:flex;justify-content:center;gap:8px;margin:10px 0;font-size:26px">${C.map((c,i)=>`<span title="${esc(c[0])}" style="opacity:${P.coronas.includes(i)?1:.25};filter:${P.coronas.includes(i)?"none":"grayscale(1)"}">${ICO[i]}</span>`).join("")}</div>
+  <div class="hud" style="max-width:420px;margin:0 auto"><span>${"❤️".repeat(P.vidas)}${"🤍".repeat(3-P.vidas)}</span><span>⭐ ${P.pts}</span><span>Corona: ${"🟡".repeat(P.racha)}${"⚪".repeat(3-P.racha)}</span></div>
+  <div class="flecha" style="margin-top:10px"></div><div class="ruleta" id="rc" style="background:conic-gradient(${grad});transform:rotate(${giro}deg)">${[...Array(n)].map((_,i)=>`<span class="rl" style="transform:rotate(${i*sec+sec/2-90}deg) translate(70px,-12px);font-size:22px">${i<6?ICO[i]:"👑"}</span>`).join("")}</div>
+  <div style="text-align:center"><button class="btn" id="gc">¡Girar!</button><p class="st">3 aciertos seguidos llenan la barra y te dan una pregunta de corona. Si cae 👑, eliges tú la ciencia.</p></div><div id="zona"></div>`;
+  document.getElementById("gc").onclick=gira}
+ function gira(){document.getElementById("gc").disabled=true;const k=Math.floor(Math.random()*n);giro+=360*5+(360-(k*sec+sec/2))-(giro%360);document.getElementById("rc").style.transform=`rotate(${giro}deg)`;
+  setTimeout(()=>{if(k===6||P.racha>=3)elegir(k===6);else juega(k,false)},3300)}
+ function elegir(porRuleta){const libres=[0,1,2,3,4,5].filter(i=>!P.coronas.includes(i));document.getElementById("zona").innerHTML=`<h3 style="text-align:center">${porRuleta?"¡Ha caído la corona!":"¡Barra llena!"} Elige la corona que quieres ganar:</h3><div class="chips" style="justify-content:center">${libres.map(i=>`<button class="chip" data-c="${i}">${ICO[i]} ${esc(C[i][0])}</button>`).join("")}</div>`;
+  document.querySelectorAll("#zona .chip").forEach(b=>b.onclick=()=>juega(+b.dataset.c,true))}
+ function juega(c,corona){const q=preguntaDe(c);const z=document.getElementById("zona");if(corona)z.insertAdjacentHTML("beforebegin","");pintaPregunta(z,q,c,(bien,resto)=>{
+   if(bien){P.pts+=10+resto;if(corona){P.coronas.push(c);P.pts+=50;P.racha=0;confeti();toast("👑 ¡Corona de "+C[c][0]+"!")}else P.racha=Math.min(3,P.racha+1)}
+   else{P.vidas--;if(!corona)P.racha=0}
+   if(P.coronas.length===6||P.vidas<=0)return fin();tablero();z.scrollIntoView&&0},20);z.scrollIntoView({behavior:"smooth"})}
+ function fin(){const gano=P.coronas.length===6;if(gano)P.pts+=200;S.xp+=Math.round(P.pts/4);const rec=P.pts>(S.mejorCoronas||0);if(rec)S.mejorCoronas=P.pts;if(gano||P.pts>=150)S.sobresExtra++;racha();guarda();if(gano||rec)confeti();
+  a.innerHTML=`<div class="arc"><div style="font-size:40px">${P.coronas.map(i=>ICO[i]).join("")||"😅"}</div><div style="font:700 52px Fredoka;color:var(--gold)">${P.pts}</div><p>${gano?"¡Has ganado las 6 coronas! +200":"Coronas: "+P.coronas.length+"/6"} · ${rec?"¡Nuevo récord!":"Récord: "+S.mejorCoronas}${gano||P.pts>=150?" · sobre extra ✉️":""}</p><div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap"><button class="btn" onclick="ruta()">Otra partida</button><button class="btn sec" onclick="go('#duelo')">⚔️ Retar a un amigo</button><button class="btn sec" onclick="go('')">Inicio</button></div></div>`}
+ tablero()}
+// ---------- duelo por enlace (sin servidor) ----------
+function vDuelo(a,_,args){const [seedS,rival,ptsS]=(args||[]).map(x=>decodeURIComponent(x||""));const reto=seedS&&rival;
+ let nombre="";try{nombre=localStorage.getItem("juegoNombre")||""}catch(e){}
+ a.innerHTML=`<button class="back" onclick="go('')">← Inicio</button><h2>⚔️ ${reto?esc(rival)+" te reta":"Reta a un amigo"}</h2>${reto?`<div class="arc" style="margin-bottom:12px"><p style="margin:0">${esc(rival)} ha sacado</p><div style="font:700 44px Fredoka;color:var(--gold)">${+ptsS} pts</div><p class="st">Las mismas 10 preguntas, 15 segundos cada una. Cuanto más rápido aciertes, más puntos.</p></div>`:`<p class="st">Juegas 10 preguntas (15 segundos cada una; cuanto más rápido, más puntos) y al acabar te doy un enlace. Tu amigo juega exactamente las mismas preguntas y ve quién ha ganado.</p>`}
+ <p>Tu nombre: <input id="nom" value="${esc(nombre)}" maxlength="20" style="padding:9px 12px;border-radius:10px;border:1.5px solid var(--line);font:16px Inter;background:var(--card);color:var(--ink)"></p><button class="btn" id="emp">▶ ${reto?"Aceptar el reto":"Empezar"}</button><div id="zona" style="margin-top:12px"></div>`;
+ document.getElementById("emp").onclick=()=>{nombre=(document.getElementById("nom").value||"Anónimo").trim().slice(0,20);try{localStorage.setItem("juegoNombre",nombre)}catch(e){}
+  const seed=reto?+seedS:Math.floor(Math.random()*1e9);const r=rng(seed);const cs=[0,1,2,3,4,5,0,1,2,5].map(x=>x);const qs=cs.map(c=>[c,preguntaDe(c,r)]);let k=0,pts=0,ac=0;const z=document.getElementById("zona");document.getElementById("emp").remove();
+  function sig(){if(k>=qs.length)return fin();const [c,q]=qs[k];pintaPregunta(z,q,c,(bien,resto)=>{if(bien){ac++;pts+=10+resto}k++;sig()},15)}
+  function fin(){S.xp+=Math.round(pts/4);racha();guarda();const url=location.origin+location.pathname+"#duelo~"+seed+"~"+encodeURIComponent(nombre)+"~"+pts;
+   let res="";if(reto){const g=pts>+ptsS,e=pts===+ptsS;res=`<p class="fred" style="font-size:24px">${g?"🏆 ¡Has ganado a "+esc(rival)+"!":e?"🤝 Empate":"😤 Gana "+esc(rival)+"… ¡revancha!"}</p>`;if(g)confeti()}
+   z.innerHTML=`<div class="arc">${res}<div style="font:700 52px Fredoka;color:var(--gold)">${pts} pts</div><p>${ac}/10 aciertos</p><p>Manda este enlace para ${reto?"devolverle el reto":"retar a tus amigos"}:</p><input id="lnk" readonly value="${esc(url)}" style="width:100%;padding:10px;border-radius:10px;border:1.5px solid var(--line);font:14px Inter;background:var(--bg);color:var(--ink)"><div style="display:flex;gap:10px;justify-content:center;margin-top:10px;flex-wrap:wrap"><button class="btn" id="cop">📋 Copiar enlace</button><a class="btn sec" style="text-decoration:none" href="https://wa.me/?text=${encodeURIComponent("⚔️ Te reto en El juego de los expertos: he sacado "+pts+" puntos. ¿Me ganas? "+url)}" target="_blank" rel="noopener">WhatsApp</a><button class="btn sec" onclick="go('')">Inicio</button></div></div>`;
+   document.getElementById("cop").onclick=async()=>{try{await navigator.clipboard.writeText(url);toast("Enlace copiado")}catch(e){document.getElementById("lnk").select();toast("Selecciónalo y cópialo")}}}
+  sig()}}
+
 window.addEventListener("hashchange",ruta);hud();ruta();
 </script>
 </body>
