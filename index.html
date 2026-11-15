@@ -188,9 +188,9 @@ function vCoronas(a){let P={coronas:[],racha:0,vidas:3,pts:0};const n=7,sec=360/
  function elegir(porRuleta){const libres=[0,1,2,3,4,5].filter(i=>!P.coronas.includes(i));document.getElementById("zona").innerHTML=`<h3 style="text-align:center">${porRuleta?"¡Ha caído la corona!":"¡Barra llena!"} Elige la corona que quieres ganar:</h3><div class="chips" style="justify-content:center">${libres.map(i=>`<button class="chip" data-c="${i}">${ICO[i]} ${esc(C[i][0])}</button>`).join("")}</div>`;
   document.querySelectorAll("#zona .chip").forEach(b=>b.onclick=()=>juega(+b.dataset.c,true))}
  function juega(c,corona){const q=preguntaDe(c);const z=document.getElementById("zona");if(corona)z.insertAdjacentHTML("beforebegin","");pintaPregunta(z,q,c,(bien,resto)=>{
-   if(bien){P.pts+=10+resto;if(corona){P.coronas.push(c);P.pts+=50;P.racha=0;confeti();toast("👑 ¡Corona de "+C[c][0]+"!")}else P.racha=Math.min(3,P.racha+1)}
+   if(bien){P.pts+=10+Math.round(resto/2);if(corona){P.coronas.push(c);P.pts+=50;P.racha=0;confeti();toast("👑 ¡Corona de "+C[c][0]+"!")}else P.racha=Math.min(3,P.racha+1)}
    else{P.vidas--;if(!corona)P.racha=0}
-   if(P.coronas.length===6||P.vidas<=0)return fin();tablero();z.scrollIntoView&&0},20);z.scrollIntoView({behavior:"smooth"})}
+   if(P.coronas.length===6||P.vidas<=0)return fin();tablero();z.scrollIntoView&&0},40);z.scrollIntoView({behavior:"smooth"})}
  function fin(){const gano=P.coronas.length===6;if(gano)P.pts+=200;S.xp+=Math.round(P.pts/4);const rec=P.pts>(S.mejorCoronas||0);if(rec)S.mejorCoronas=P.pts;if(gano||P.pts>=150)S.sobresExtra++;racha();guarda();if(gano||rec)confeti();enviar("coronas",P.pts);
   a.innerHTML=`<div class="arc"><div style="font-size:40px">${P.coronas.map(i=>ICO[i]).join("")||"😅"}</div><div style="font:700 52px Fredoka;color:var(--gold)">${P.pts}</div><p>${gano?"¡Has ganado las 6 coronas! +200":"Coronas: "+P.coronas.length+"/6"} · ${rec?"¡Nuevo récord!":"Récord: "+S.mejorCoronas}${gano||P.pts>=150?" · sobre extra ✉️":""}</p><div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap"><button class="btn" onclick="ruta()">Otra partida</button><button class="btn sec" onclick="go('#duelo')">⚔️ Retar a un amigo</button><button class="btn sec" onclick="go('#ranking')">🏆 Ranking</button></div>${avisoRanking()}</div>`}
  tablero()}
